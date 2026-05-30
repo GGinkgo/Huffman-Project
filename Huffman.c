@@ -103,7 +103,7 @@ int compressAppendFile(const char *srcFilename, FILE *dest, unsigned char *bits_
     Node *root = buildHuffmanTree(freq);
     int nameLen = strlen(srcFilename);
 
-    if (root == NULL) { // 空文件元数据处理
+    if (root == NULL) { 
         fwrite(freq, sizeof(long long), 256, dest);
         fwrite(&nameLen, sizeof(int), 1, dest);
         fwrite(srcFilename, sizeof(char), nameLen, dest);
@@ -142,6 +142,13 @@ int compressAppendFile(const char *srcFilename, FILE *dest, unsigned char *bits_
         }
     }
 
+    if (*bit_count > 0) {
+        *bits_buffer <<= (8 - *bit_count);
+        fputc(*bits_buffer, dest);
+        *bits_buffer = 0;
+        *bit_count = 0;
+    }
+
     fclose(src);
     freeTree(root);
     for (int i = 0; i < 256; i++) {
@@ -169,6 +176,10 @@ int decompressMultiFile(const char *srcFilename, const char *outputDir) {
     int bit_count = 0;
 
     for (int f = 0; f < totalFiles; f++) {
+  
+        bits_buffer = 0;
+        bit_count = 0;
+
         long long freq[256] = {0};
         if (fread(freq, sizeof(long long), 256, src) != 256) break;
 
@@ -186,7 +197,6 @@ int decompressMultiFile(const char *srcFilename, const char *outputDir) {
 
         char destPath[512];
         sprintf(destPath, "%s/%s", outputDir, pureName);
-        printf(" -> Extracting: %s\n", destPath);
 
         FILE *dest = fopen(destPath, "wb");
         if (dest == NULL) {
@@ -272,7 +282,7 @@ void processPath(const char *path, FILE *dest, unsigned char *bits_buffer, int *
         if (compressAppendFile(path, dest, bits_buffer, bit_count) != 0) {
             fprintf(stderr, "Failed to compress file: %s\n", path);
             *success = 0;
-        }
+        } 
     }
 }
 
